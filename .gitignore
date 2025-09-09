@@ -1,0 +1,6 @@
+
+generate_repo.py
+.env
+backend/.env
+node_modules/
+backend/node_modules/
