@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResEditX Authentication</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* ...[unchanged CSS from your file]... */
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #1e293b;}
+        .auth-container {background: white; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 32px; width: 100%; max-width: 400px; margin: 20px;}
+        .auth-header {text-align: center; margin-bottom: 32px;}
+        .auth-logo {width: 64px; height: 64px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+            color: white; font-size: 24px;}
+        .auth-title {font-size: 24px; font-weight: 600; color: #1e293b; margin-bottom: 8px;}
+        .auth-subtitle {color: #64748b; font-size: 14px;}
+        .auth-tabs {display: flex; background: #f1f5f9; border-radius: 8px; padding: 4px; margin-bottom: 24px;}
+        .auth-tab {flex: 1; padding: 8px 16px; text-align: center; border-radius: 6px; cursor: pointer;
+            font-weight: 500; font-size: 14px; transition: all 0.2s; color: #64748b;}
+        .auth-tab.active {background: white; color: #667eea; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);}
+        .auth-form {display: none;}
+        .auth-form.active {display: block;}
+        .form-group {margin-bottom: 16px;}
+        .form-label {display: block; font-weight: 500; color: #374151; margin-bottom: 6px; font-size: 14px;}
+        .form-input {width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;
+            transition: border-color 0.2s; font-family: inherit;}
+        .form-input:focus {outline: none; border-color: #667eea;}
+        .form-button {width: 100%; padding: 12px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer;
+            transition: transform 0.2s; margin-bottom: 16px;}
+        .form-button:hover {transform: translateY(-1px);}
+        .form-button:disabled {opacity: 0.6; cursor: not-allowed; transform: none;}
+        .success-message {background: #dcfce7; color: #166534; padding: 12px 16px; border-radius: 8px; font-size: 14px;
+            text-align: center; margin-bottom: 16px; border: 1px solid #bbf7d0;}
+        .error-message {background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 8px; font-size: 14px;
+            text-align: center; margin-bottom: 16px; border: 1px solid #fecaca;}
+        .success-container {text-align: center; display: none;}
+        .success-container.active {display: block;}
+        .success-icon {width: 80px; height: 80px; background: #10b981; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; margin: 0 auto 24px; color: white; font-size: 32px;}
+        .success-title {font-size: 20px; font-weight: 600; color: #1e293b; margin-bottom: 8px;}
+        .success-text {color: #64748b; margin-bottom: 24px;}
+        .close-button {background: #f1f5f9; color: #64748b; border: none; padding: 8px 16px; border-radius: 6px;
+            font-size: 12px; cursor: pointer;}
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Auth Header -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <h1 class="auth-title">ResEditX Authentication</h1>
+            <p class="auth-subtitle">Sign in to access AI-powered resume assistance</p>
+        </div>
+        
+        <!-- Auth Forms Container -->
+        <div id="authFormsContainer">
+            <!-- Auth Tabs -->
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login" onclick="switchTab('login')">Login</div>
+                <div class="auth-tab" data-tab="signup" onclick="switchTab('signup')">Sign Up</div>
+            </div>
+            
+            <!-- Login Form -->
+            <form class="auth-form active" id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" class="form-input" required>
+                </div>
+                <button type="submit" class="form-button">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+            
+            <!-- Signup Form -->
+            <form class="auth-form" id="signupForm">
+                <div class="form-group">
+                    <label class="form-label" for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" class="form-input" required>
+                </div>
+                <button type="submit" class="form-button">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </form>
+            
+            <!-- Messages -->
+            <div id="messageContainer"></div>
+        </div>
+        
+        <!-- Success Container -->
+        <div class="success-container" id="successContainer">
+            <div class="success-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2 class="success-title">Authentication Successful!</h2>
+            <p class="success-text">You can now close this window and return to the ResEditX add-on.</p>
+            <button class="close-button" onclick="window.close()" style="margin-right: 8px;">Close Window</button>
+            <button class="close-button" onclick="clearSession()" style="background: #ef4444; color: white;">Clear Session</button>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api'; // Change this to your deployed backend URL
+        const GOOGLE_APPS_SCRIPT_WEB_APP_URL = localStorage.getItem('gas_webapp_url') || null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => {
+                t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+            });
+            document.querySelectorAll('.auth-form').forEach(f => {
+                f.classList.toggle('active', f.id === tab + 'Form');
+            });
+            clearMessages();
+        }
+
+        function showMessage(message, type = 'error') {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = `<div class="${type}-message">${message}</div>`;
+        }
+
+        function clearMessages() {
+            document.getElementById('messageContainer').innerHTML = '';
+        }
+
+        function clearSession() {
+            localStorage.removeItem('reseditx_temp_token');
+            localStorage.removeItem('reseditx_temp_email');
+            localStorage.removeItem('current_session_id');
+            localStorage.removeItem('reseditx_session_id');
+            location.reload(); // Reload the page to show login form
+        }
+
+        function showSuccess() {
+            document.getElementById('authFormsContainer').style.display = 'none';
+            document.getElementById('successContainer').classList.add('active');
+
+            // Get the stored authentication data
+            const token = localStorage.getItem('reseditx_temp_token');
+            const email = localStorage.getItem('reseditx_temp_email');
+
+            // Try to send authentication data to Google Apps Script
+            sendAuthDataToGoogleAppsScript(token, email);
+        }
+
+        async function sendAuthDataToGoogleAppsScript(token, email) {
+            console.log('🚀 Attempting to send auth data to Google Apps Script...');
+            console.log('Token exists:', !!token);
+            console.log('Email exists:', !!email);
+            console.log('Window opener exists:', !!window.opener);
+
+            try {
+                // Method 1: Try using the Web App URL if available
+                if (GOOGLE_APPS_SCRIPT_WEB_APP_URL) {
+                    console.log('Trying Web App URL method...');
+                    const response = await fetch(GOOGLE_APPS_SCRIPT_WEB_APP_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            action: 'auth_success',
+                            token: token,
+                            email: email
+                        })
+                    });
+                    if (response.ok) {
+                        console.log('✅ Authentication data sent to Google Apps Script successfully');
+                        return;
+                    }
+                }
+
+                // Method 2: Use window messaging for fallback
+                if (window.opener) {
+                    console.log('Sending postMessage to opener window...');
+                    window.opener.postMessage({
+                        type: 'reseditx_auth_success',
+                        token: token,
+                        email: email,
+                        timestamp: Date.now()
+                    }, '*');
+                    console.log('✅ Authentication data sent via postMessage');
+                    if (window.parent && window.parent !== window) {
+                        console.log('Also sending to parent window...');
+                        window.parent.postMessage({
+                            type: 'reseditx_auth_success',
+                            token: token,
+                            email: email,
+                            timestamp: Date.now()
+                        }, '*');
+                    }
+                }
+
+                // Method 3: Store in a way that Google Apps Script can poll for
+                // This is handled by the existing localStorage storage
+                console.log('Auth data stored in localStorage for polling fallback');
+
+            } catch (error) {
+                console.error('Error sending auth data to Google Apps Script:', error);
+                try {
+                    if (window.opener) {
+                        console.log('Fallback: sending postMessage...');
+                        window.opener.postMessage({
+                            type: 'reseditx_auth_success',
+                            token: token,
+                            email: email,
+                            timestamp: Date.now()
+                        }, '*');
+                    }
+                } catch (e) {
+                    console.log('All communication methods failed');
+                }
+            }
+        }
+
+        async function handleAuth(endpoint, formData, event) {
+            try {
+                clearMessages();
+                const submitButton = event.target.querySelector('button[type="submit"]');
+                const originalText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+                const response = await fetch(`${API_BASE_URL}/user/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (endpoint === 'login') {
+                        localStorage.setItem('reseditx_temp_token', data.jwtToken);
+                        localStorage.setItem('reseditx_temp_email', formData.email);
+                        showSuccess();
+                    } else {
+                        showMessage('Account created successfully! Please log in.', 'success');
+                        switchTab('login');
+                    }
+                } else {
+                    showMessage(data.message || 'Authentication failed');
+                }
+
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalText;
+
+            } catch (error) {
+                console.error('Auth error:', error);
+                showMessage('Authentication service temporarily unavailable');
+                try {
+                    const submitButton = event.target.querySelector('button[type="submit"]');
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+                } catch (e) {}
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = {
+                email: document.getElementById('loginEmail').value,
+                password: document.getElementById('loginPassword').value
+            };
+            handleAuth('login', formData, e);
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match');
+                return;
+            }
+            const formData = {
+                email: document.getElementById('signupEmail').value,
+                password: password
+            };
+            handleAuth('signup', formData, e);
+        });
+
+        window.addEventListener('load', function() {
+            const token = localStorage.getItem('reseditx_temp_token');
+            const email = localStorage.getItem('reseditx_temp_email');
+            if (token && email) {
+                showSuccess();
+            }
+        });
+    </script>
+</body>
+</html>
