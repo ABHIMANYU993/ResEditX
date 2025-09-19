@@ -59,3 +59,28 @@ exports.usersLogin = async (req, res) => {
   }
 };
 
+//TOKEN VALIDATION
+exports.validateToken = async (req, res) => {
+  try {
+    // If we reach here, the JWT middleware has already validated the token
+    // and attached the user info to req.user
+    const userId = req.user.userId;
+    
+    // Optionally, verify the user still exists in the database
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    res.json({
+      message: "Token is valid",
+      userId: userId,
+      email: user.email,
+      isSubscribed: user.is_subscribed,
+      credits: user.credits
+    });
+  } catch (error) {
+    console.error("Token validation error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
