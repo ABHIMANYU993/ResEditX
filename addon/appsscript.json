@@ -1,0 +1,30 @@
+{
+  "timeZone": "Asia/Kolkata",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/documents.currentonly",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/script.scriptapp"
+  ],
+  "urlFetchWhitelist": [
+    "https://generativelanguage.googleapis.com/"
+  ],
+  "addOns": {
+    "common": {
+      "name": "ResEditX",
+      "logoUrl": "https://raw.githubusercontent.com/kkvishvaa/reseditx-assets/7e038fe14589d4ba8b157da485f8592c52dcad3a/icon48.png",
+      "layoutProperties": {
+        "primaryColor": "#4285F4",
+        "secondaryColor": "#D3E3FD"
+      }
+    },
+    "docs": {
+      "homepageTrigger": {
+        "runFunction": "onHomepage"
+      }
+    }
+  }
+}
