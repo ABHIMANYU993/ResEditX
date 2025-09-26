@@ -286,3 +286,310 @@ function getDocumentContent() {
 /**
  * Insert text at cursor position or replace selected text in the document
  */
+function insertText(text) {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    
+    // First, try to get the current selection (highlighted text)
+    const selection = doc.getSelection();
+    
+    if (selection && selection.getRangeElements().length > 0) {
+      // There's highlighted text - replace it with the new text
+      console.log('Found selection, replacing selected text');
+      
+      // Get all selected elements and their ranges
+      const rangeElements = selection.getRangeElements();
+      let totalSelectedText = '';
+      
+      // Collect all selected text for logging
+      for (let i = 0; i < rangeElements.length; i++) {
+        const element = rangeElements[i];
+        if (element.getElement().getType() === DocumentApp.ElementType.TEXT) {
+          const textEl = element.getElement().asText();
+          const startOffset = element.getStartOffset();
+          const endOffset = element.getEndOffsetInclusive();
+          totalSelectedText += textEl.getText().substring(startOffset, endOffset + 1);
+        }
+      }
+      
+      console.log('Replacing selected text:', totalSelectedText.substring(0, 100));
+      
+      // Replace the selected content with new text
+      // We'll delete the selection and insert new text at the same position
+      const firstElement = rangeElements[0];
+      const lastElement = rangeElements[rangeElements.length - 1];
+      
+      // Start from the last element and work backwards to maintain offsets
+      for (let i = rangeElements.length - 1; i >= 0; i--) {
+        const element = rangeElements[i];
+        
+        if (element.getElement().getType() === DocumentApp.ElementType.TEXT) {
+          const textElement = element.getElement().asText();
+          const startOffset = element.getStartOffset();
+          const endOffset = element.getEndOffsetInclusive();
+          
+          // Delete the selected text
+          if (startOffset <= endOffset) {
+            textElement.deleteText(startOffset, endOffset);
+          }
+          
+          // Insert new text only at the first element's position
+          if (i === 0) {
+            textElement.insertText(startOffset, text);
+          }
+        }
+      }
+      
+      return {
+        success: true,
+        message: `Replaced selected text with generated content`
+      };
+    }
+    
+    // If no selection, try to get cursor position
+    const cursor = doc.getCursor();
+    
+    if (cursor) {
+      // Insert at cursor position
+      const element = cursor.getElement();
+      const offset = cursor.getOffset();
+      
+      if (element.getType() === DocumentApp.ElementType.TEXT) {
+        const textElement = element.asText();
+        textElement.insertText(offset, text);
+        return {
+          success: true,
+          message: 'Text inserted at cursor position'
+        };
+      } else {
+        // If cursor is not in text, insert a new paragraph at that position
+        const body = doc.getBody();
+        const paragraph = body.insertParagraph(body.getChildIndex(element), text);
+        return {
+          success: true,
+          message: 'Text inserted as new paragraph at cursor position'
+        };
+      }
+    }
+    
+    // If no cursor or selection, try to find the last active position
+    // Look for the last paragraph with content
+    const body = doc.getBody();
+    const paragraphs = body.getParagraphs();
+    
+    for (let i = paragraphs.length - 1; i >= 0; i--) {
+      const paragraph = paragraphs[i];
+      if (paragraph.getText().trim()) {
+        // Found a paragraph with content, insert after it
+        const newParagraph = body.insertParagraph(body.getChildIndex(paragraph) + 1, text);
+        return {
+          success: true,
+          message: 'Text inserted after last paragraph with content'
+        };
+      }
+    }
+    
+    // Last resort: insert at the very beginning
+    body.insertParagraph(0, text);
+    return {
+      success: true,
+      message: 'Text inserted at beginning of document'
+    };
+    
+  } catch (error) {
+    console.error('Error inserting text:', error);
+    return {
+      success: false,
+      message: 'Error inserting text: ' + error.message
+    };
+  }
+}
+
+/**
+ * Copy text to clipboard (simulated for Google Apps Script)
+ */
+function copyToClipboard(text) {
+  try {
+    // Store in Properties for access by other functions
+    PropertiesService.getDocumentProperties().setProperty('clipboardText', text);
+    
+    return {
+      success: true,
+      message: 'Text copied to clipboard (stored in add-on)'
+    };
+    
+  } catch (error) {
+    console.error('Error copying text:', error);
+    return {
+      success: false,
+      message: 'Error copying text: ' + error.message
+    };
+  }
+}
+
+/**
+ * Get text from clipboard (stored in add-on)
+ */
+function getClipboardText() {
+  try {
+    const text = PropertiesService.getDocumentProperties().getProperty('clipboardText') || '';
+    return {
+      success: true,
+      text: text,
+      message: text ? 'Text retrieved from clipboard' : 'Clipboard is empty'
+    };
+    
+  } catch (error) {
+    console.error('Error getting clipboard text:', error);
+    return {
+      success: false,
+      text: '',
+      message: 'Error getting clipboard text: ' + error.message
+    };
+  }
+}
+
+/**
+ * Get current cursor/selection position info
+ */
+function getCurrentPosition() {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    const selection = doc.getSelection();
+    const cursor = doc.getCursor();
+    
+    if (selection && selection.getRangeElements().length > 0) {
+      const firstElement = selection.getRangeElements()[0];
+      const element = firstElement.getElement();
+      const startOffset = firstElement.getStartOffset();
+      const endOffset = firstElement.getEndOffsetInclusive();
+      
+      return {
+        success: true,
+        type: 'selection',
+        message: `Text selected from position ${startOffset} to ${endOffset}`,
+        startOffset: startOffset,
+        endOffset: endOffset,
+        elementType: element.getType().toString()
+      };
+    } else if (cursor) {
+      const element = cursor.getElement();
+      const offset = cursor.getOffset();
+      
+      return {
+        success: true,
+        type: 'cursor',
+        message: `Cursor at position ${offset}`,
+        offset: offset,
+        elementType: element.getType().toString()
+      };
+    } else {
+      return {
+        success: false,
+        type: 'none',
+        message: 'No cursor or selection found. Click somewhere in the document first.',
+        offset: -1
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error getting current position:', error);
+    return {
+      success: false,
+      type: 'error',
+      message: 'Error getting position: ' + error.message,
+      offset: -1
+    };
+  }
+}
+
+/**
+ * Force cursor to a specific position (for testing)
+ */
+function setCursorToPosition(paragraphIndex, offset) {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    const body = doc.getBody();
+    const paragraphs = body.getParagraphs();
+    
+    if (paragraphIndex >= 0 && paragraphIndex < paragraphs.length) {
+      const paragraph = paragraphs[paragraphIndex];
+      const text = paragraph.getText();
+      
+      if (offset >= 0 && offset <= text.length) {
+        // Set cursor to this position
+        const range = paragraph.getRange();
+        const element = range.getElement(0);
+        const textElement = element.asText();
+        
+        // This is a workaround since we can't directly set cursor
+        // We'll select the text at that position briefly
+        textElement.setSelection(offset, offset);
+        
+        return {
+          success: true,
+          message: `Cursor positioned at paragraph ${paragraphIndex}, offset ${offset}`,
+          paragraphIndex: paragraphIndex,
+          offset: offset
+        };
+      } else {
+        return {
+          success: false,
+          message: `Invalid offset ${offset}. Text length is ${text.length}`
+        };
+      }
+    } else {
+      return {
+        success: false,
+        message: `Invalid paragraph index ${paragraphIndex}. Document has ${paragraphs.length} paragraphs`
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error setting cursor position:', error);
+    return {
+      success: false,
+      message: 'Error setting cursor position: ' + error.message
+    };
+  }
+}
+
+/**
+ * Test function to demonstrate insert at cursor
+ */
+function testInsertAtCursor() {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    const cursor = doc.getCursor();
+    
+    if (!cursor) {
+      showMessage('No cursor found! Click somewhere in the document first, then try again.');
+      return;
+    }
+    
+    const element = cursor.getElement();
+    const offset = cursor.getOffset();
+    
+    // Insert test text at cursor position
+    const testText = '\n[TEST INSERT AT CURSOR - ' + new Date().toLocaleTimeString() + ']\n';
+    
+    if (element.getType() === DocumentApp.ElementType.TEXT) {
+      const textElement = element.asText();
+      textElement.insertText(offset, testText);
+      showMessage(`Test text inserted at cursor position (offset: ${offset})`);
+    } else {
+      // Insert as new paragraph at cursor position
+      const body = doc.getBody();
+      const paragraph = body.insertParagraph(body.getChildIndex(element), testText);
+      showMessage(`Test text inserted as new paragraph at cursor position`);
+    }
+    
+  } catch (error) {
+    console.error('Error in test insert:', error);
+    showMessage('Error in test insert: ' + error.message);
+  }
+}
+
+/**
+ * Show a message to the user
+ */
