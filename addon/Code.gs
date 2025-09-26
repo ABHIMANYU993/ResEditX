@@ -593,3 +593,213 @@ function testInsertAtCursor() {
 /**
  * Show a message to the user
  */
+function showMessage(message) {
+  DocumentApp.getUi().alert('ResEditX', message, DocumentApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Show the ResEditX sidebar interface
+ */
+function showSidebar() {
+  // Ensure API key is initialized for continuous operation
+  initializeApiKey();
+  
+  const html = HtmlService.createHtmlOutputFromFile('Interface')
+    .setTitle('ResEditX - AI Resume Assistant')
+    .setWidth(400);
+  
+  DocumentApp.getUi().showSidebar(html);
+}
+
+/**
+ * Show the ResEditX interface as a dialog (alternative to sidebar)
+ */
+function showDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('Interface')
+    .setTitle('ResEditX - AI Resume Assistant')
+    .setWidth(500)
+    .setHeight(600);
+  
+  DocumentApp.getUi().showModalDialog(html, 'ResEditX');
+}
+
+/**
+ * Show the ResEditX test interface for testing Gemini API functions
+ */
+function showTestInterface() {
+  const html = HtmlService.createHtmlOutputFromFile('test-interface')
+    .setTitle('ResEditX - Gemini API Test Interface')
+    .setWidth(800)
+    .setHeight(800);
+  
+  DocumentApp.getUi().showModalDialog(html, 'ResEditX Test Interface');
+}
+
+/**
+ * Homepage trigger function
+ */
+function onHomepage(e) {
+  return HtmlService.createHtmlOutput(`
+    <h2>ResEditX Add-on</h2>
+    <p>This add-on provides real-time text extraction from Google Docs.</p>
+    <p>Open a Google Doc and use the add-on menu to extract text.</p>
+    <h3>Features:</h3>
+    <ul>
+      <li>Extract selected text in real-time</li>
+      <li>Extract all document text</li>
+      <li>Track selection changes</li>
+      <li>Access text programmatically</li>
+    </ul>
+  `);
+}
+
+/**
+ * Gemini API Integration for ResEditX
+ * Direct integration with Gemini 1.5 Flash for AI-powered resume analysis
+ */
+
+// Gemini API Configuration
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+
+/**
+ * Get Gemini API key from secure storage
+ * For published add-ons, the API key should be set once by the developer
+ */
+function getGeminiApiKey() {
+  // Get from Script Properties (secure storage)
+  let apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  
+  if (!apiKey) {
+    console.error('❌ Gemini API key not configured in Script Properties');
+    throw new Error('AI service temporarily unavailable. Please contact support.');
+  }
+  
+  return apiKey;
+}
+
+/**
+ * Set the Gemini API key securely in Script Properties
+ * This should be run once by the developer before publishing
+ * Call this function with: setGeminiApiKey("your-actual-api-key")
+ */
+function setGeminiApiKey(apiKey) {
+  if (!apiKey) {
+    console.log('❌ No API key provided.');
+    return 'No API key provided';
+  }
+  
+  PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', apiKey);
+  console.log('✅ Gemini API key set securely in Script Properties');
+  console.log('🔐 API key is now stored securely and ready for production use');
+  return 'API key stored securely - ready for publishing';
+}
+
+/**
+ * Remove the API key from secure storage (for key rotation)
+ */
+function removeGeminiApiKey() {
+  PropertiesService.getScriptProperties().deleteProperty('GEMINI_API_KEY');
+  console.log('🗑️ Gemini API key removed from Script Properties');
+  return 'API key removed';
+}
+
+/**
+ * Call Gemini API with the specified prompt
+ */
+function callGeminiAPI(prompt, options = {}) {
+  try {
+    console.log('Making Gemini API call...');
+    console.log('Prompt length:', prompt.length);
+    console.log('Options:', options);
+    
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      throw new Error('Gemini API key not configured. Please set it using setGeminiApiKey()');
+    }
+    
+    const url = `${GEMINI_BASE_URL}?key=${apiKey}`;
+    
+    const requestBody = {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generationConfig: {
+        temperature: options.temperature || 0.2,
+        topK: options.topK || 32,
+        topP: options.topP || 1,
+        maxOutputTokens: options.maxTokens || 500,
+        stopSequences: options.stopSequences || []
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH", 
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ]
+    };
+
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
+    const options_http = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      payload: JSON.stringify(requestBody)
+    };
+
+    console.log('Making HTTP request to Gemini API...');
+    const response = UrlFetchApp.fetch(url, options_http);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+    
+    console.log('Response code:', responseCode);
+    console.log('Response text:', responseText);
+    
+    if (responseCode !== 200) {
+      console.error(`API request failed: ${responseCode} - ${responseText}`);
+      throw new Error(`API request failed: ${responseCode} - ${responseText}`);
+    }
+
+    const data = JSON.parse(responseText);
+    console.log('Parsed response data:', data);
+    
+    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+      const result = data.candidates[0].content.parts[0].text;
+      console.log("✅ Gemini API call successful, result length:", result.length);
+      console.log("Result preview:", result.substring(0, 200));
+      return {
+        success: true,
+        result: result
+      };
+    } else {
+      console.error(`Unexpected API response structure:`, data);
+      throw new Error(`Unexpected API response structure: ${JSON.stringify(data)}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Gemini API Error:', error);
+    return {
+      success: false,
+      error: error.message || 'An unexpected error occurred'
+    };
+  }
+}
+
+/**
+ * Extract keywords from job description using Gemini AI
+ */
