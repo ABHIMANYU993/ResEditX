@@ -803,3 +803,57 @@ function callGeminiAPI(prompt, options = {}) {
 /**
  * Extract keywords from job description using Gemini AI
  */
+function extractKeywordsWithGemini(jobDescription) {
+  return requireAuth(() => {
+    try {
+      console.log('Starting keyword extraction with Gemini...');
+      console.log('Job description length:', jobDescription.length);
+    
+    const prompt = `Analyze this job description and extract 12-15 relevant keywords and key phrases that would be important for ATS optimization and resume tailoring. Focus on:
+- Technical skills and tools
+- Industry-specific terminology  
+- Action verbs and competencies
+- Required qualifications
+- Key responsibilities
+
+Job Description:
+${jobDescription}
+
+Return only the keywords/phrases separated by commas, no additional commentary:`;
+    
+    console.log('Calling Gemini API for keyword extraction...');
+    const response = callGeminiAPI(prompt, { 
+      temperature: 0.1, 
+      maxTokens: 300 
+    });
+    
+    console.log('Gemini API response for keywords:', response);
+    
+    if (response.success) {
+      // Parse the comma-separated keywords
+      const keywords = response.result.split(',').map(k => k.trim()).filter(k => k.length > 0);
+      console.log('Extracted keywords:', keywords);
+      
+      return {
+        success: true,
+        keywords: keywords,
+      count: keywords.length
+    };
+  } else {
+    console.error('Gemini API failed for keyword extraction:', response.error);
+    throw new Error(response.error || 'Failed to extract keywords');
+  }
+  
+} catch (error) {
+  console.error('Error extracting keywords with Gemini:', error);
+  return {
+    success: false,
+    error: error.message,
+    keywords: [],
+    count: 0
+  };
+}
+});
+}/**
+ * Analyze resume using Gemini AI for ATS optimization
+ */
