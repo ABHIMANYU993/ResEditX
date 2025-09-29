@@ -857,3 +857,82 @@ Return only the keywords/phrases separated by commas, no additional commentary:`
 }/**
  * Analyze resume using Gemini AI for ATS optimization
  */
+function analyzeResumeWithGemini(resumeText, jobDescription) {
+  return requireAuth(() => {
+    try {
+      console.log('Starting resume analysis with Gemini...');
+      console.log('Resume text length:', resumeText.length);
+      console.log('Job description length:', jobDescription.length);
+    
+    const prompt = `You are an expert ATS (Applicant Tracking System) analyzer. Evaluate how well this resume matches the job description and provide optimization recommendations.
+
+RESUME:
+${resumeText}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+Analyze for:
+1. Keyword matching and density
+2. Skills alignment
+3. Experience relevance
+4. Format compatibility
+5. Missing crucial elements
+
+Respond with ONLY a JSON object in this exact format:
+{
+  "score": <integer 0-100>,
+  "keywordMatch": <integer 0-100>,
+  "skillsMatch": <integer 0-100>, 
+  "experienceMatch": <integer 0-100>,
+  "advice": "<3-5 specific, actionable recommendations separated by semicolons>",
+  "missingKeywords": ["keyword1", "keyword2", "keyword3"],
+  "strengths": ["strength1", "strength2"]
+}`;
+
+    console.log('Calling Gemini API for resume analysis...');
+    const response = callGeminiAPI(prompt, { 
+      temperature: 0.1, 
+      maxTokens: 600 
+    });
+    
+    console.log('Gemini API response for analysis:', response);
+    
+    if (response.success) {
+      // Try to extract JSON from the response
+      let parsed = null;
+      try {
+        const jsonMatch = response.result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+          console.log('Successfully parsed analysis JSON:', parsed);
+        } else {
+          console.log('No JSON found in response, trying to parse entire response');
+          parsed = JSON.parse(response.result);
+        }
+      } catch (e) {
+        console.error('JSON parsing failed:', e);
+        console.log('Raw response that failed to parse:', response.result);
+      }
+      
+      return {
+        success: true,
+      raw: response.result,
+      parsed: parsed
+    };
+  } else {
+    console.error('Gemini API failed for resume analysis:', response.error);
+    throw new Error(response.error || 'Failed to analyze resume');
+  }
+  
+} catch (error) {
+  console.error('Error analyzing resume with Gemini:', error);
+  return {
+    success: false,
+    error: error.message
+  };
+}
+});
+}/**
+ * Generate bullet point using Gemini AI
+ */
