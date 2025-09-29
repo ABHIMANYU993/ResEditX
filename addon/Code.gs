@@ -1128,3 +1128,419 @@ function testGeminiWhitelist() {
 
 /**
  * Web app endpoint to receive authentication data from external auth page
+ * This function will be called by the external auth page after successful login
+ */
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    
+    if (data.action === 'auth_success' && data.token && data.email) {
+      // Store the authentication data
+      storeAuthData(data.token, data.email);
+      
+      console.log('✅ Authentication data received via doPost:', data.email);
+      
+      return ContentService
+        .createTextOutput(JSON.stringify({ success: true, message: 'Authentication data stored' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, message: 'Invalid request' }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    console.error('Error in doPost:', error);
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, message: 'Server error' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Web app endpoint to handle GET requests (for testing)
+ */
+function doGet(e) {
+  const action = e.parameter.action;
+  
+  if (action === 'check_auth') {
+    const authStatus = getAuthStatus();
+    return ContentService
+      .createTextOutput(JSON.stringify(authStatus))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  return ContentService
+    .createTextOutput(JSON.stringify({ message: 'ResEditX Auth Endpoint' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Get the Google Apps Script web app URL for authentication callbacks
+ */
+function getWebAppUrl() {
+  // This will need to be set manually after deploying the web app
+  // For now, return a placeholder that the user needs to replace
+  const webAppUrl = PropertiesService.getScriptProperties().getProperty('WEB_APP_URL');
+  
+  if (!webAppUrl) {
+    console.log('⚠️  Web App URL not configured. Please deploy as web app and set the URL.');
+    return null;
+  }
+  
+  return webAppUrl;
+}
+
+/**
+ * Set the web app URL after deployment
+ * Call this function once after deploying the script as a web app
+ */
+function setWebAppUrl(url) {
+  PropertiesService.getScriptProperties().setProperty('WEB_APP_URL', url);
+  console.log('✅ Web App URL set:', url);
+}
+
+/**
+ * ==============================================
+ * AUTHENTICATION INTEGRATION WITH BACKEND
+ * ==============================================
+ */
+
+// Backend Configuration
+const BACKEND_BASE_URL = 'http://localhost:3000'; // Change this to your deployed backend URL
+const AUTH_WEBSITE_URL = 'http://localhost:3000/auth.html'; // Your external auth website URL
+
+/**
+ * Check if user is authenticated by validating stored JWT token
+ */
+function isUserAuthenticated() {
+  try {
+    const token = PropertiesService.getUserProperties().getProperty('auth_token');
+    const userEmail = PropertiesService.getUserProperties().getProperty('user_email');
+    
+    if (!token || !userEmail) {
+      console.log('❌ No authentication token or email found');
+      return {
+        authenticated: false,
+        message: 'User not logged in'
+      };
+    }
+    
+    // Validate token with backend
+    const response = validateTokenWithBackend(token);
+    
+    if (response.success) {
+      console.log('✅ User is authenticated:', userEmail);
+      return {
+        authenticated: true,
+        userEmail: userEmail,
+        token: token
+      };
+    } else {
+      // Token is invalid, clear stored auth data
+      clearAuthData();
+      return {
+        authenticated: false,
+        message: 'Authentication expired'
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return {
+      authenticated: false,
+      message: 'Authentication check failed'
+    };
+  }
+}
+
+/**
+ * Validate JWT token with backend server
+ */
+function validateTokenWithBackend(token) {
+  try {
+    // For local development, skip backend validation since Apps Script can't access localhost
+    // In production, replace localhost:3000 with your deployed HTTPS backend URL
+    if (BACKEND_BASE_URL.includes('localhost')) {
+      console.log('⚠️  Local development: Skipping backend token validation');
+      return {
+        success: true,
+        message: 'Local development mode - token assumed valid'
+      };
+    }
+    
+    const url = `${BACKEND_BASE_URL}/api/user/validate`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    };
+    
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    
+    if (responseCode === 200) {
+      return {
+        success: true,
+        message: 'Token valid'
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Token invalid or expired'
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error validating token:', error);
+    
+    // For local development, if validation fails, assume token is valid
+    if (BACKEND_BASE_URL.includes('localhost')) {
+      console.log('⚠️  Local development: Token validation failed, assuming valid');
+      return {
+        success: true,
+        message: 'Local development fallback'
+      };
+    }
+    
+    return {
+      success: false,
+      message: 'Validation failed'
+    };
+  }
+}
+
+/**
+ * Store authentication data securely
+ */
+function storeAuthData(token, userEmail) {
+  try {
+    PropertiesService.getUserProperties().setProperties({
+      'auth_token': token,
+      'user_email': userEmail,
+      'auth_timestamp': new Date().getTime().toString()
+    });
+    
+    console.log('✅ Authentication data stored securely');
+    return true;
+  } catch (error) {
+    console.error('Error storing auth data:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear authentication data
+ */
+function clearAuthData() {
+  try {
+    PropertiesService.getUserProperties().deleteProperty('auth_token');
+    PropertiesService.getUserProperties().deleteProperty('user_email');
+    PropertiesService.getUserProperties().deleteProperty('auth_timestamp');
+    
+    console.log('🗑️ Authentication data cleared');
+    return true;
+  } catch (error) {
+    console.error('Error clearing auth data:', error);
+    return false;
+  }
+}
+
+/**
+ * Get authentication status for the interface
+ */
+function getAuthStatus() {
+  const authCheck = isUserAuthenticated();
+  
+  return {
+    authenticated: authCheck.authenticated,
+    userEmail: authCheck.userEmail || null,
+    message: authCheck.message || 'Ready',
+    timestamp: new Date().toISOString()
+  };
+}
+
+/**
+ * Handle authentication callback from external website
+ */
+function handleAuthCallback(token, userEmail) {
+  try {
+    if (!token || !userEmail) {
+      return {
+        success: false,
+        message: 'Invalid authentication data'
+      };
+    }
+    
+    // Validate the token with backend
+    const validation = validateTokenWithBackend(token);
+    
+    if (validation.success) {
+      // Store authentication data
+      const stored = storeAuthData(token, userEmail);
+      
+      if (stored) {
+        return {
+          success: true,
+          message: 'Authentication successful',
+          userEmail: userEmail
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Failed to store authentication data'
+        };
+      }
+    } else {
+      return {
+        success: false,
+        message: 'Token validation failed'
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error handling auth callback:', error);
+    return {
+      success: false,
+      message: 'Authentication callback failed'
+    };
+  }
+}
+
+/**
+ * Logout user by clearing authentication data
+ */
+function logoutUser() {
+  try {
+    const cleared = clearAuthData();
+    
+    if (cleared) {
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Logout failed'
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error logging out:', error);
+    return {
+      success: false,
+      message: 'Logout error'
+    };
+  }
+}
+
+/**
+ * Attempt to retrieve authentication data from backend using stored session ID
+ */
+function retrieveAuthDataFromBackend() {
+  try {
+    const sessionId = PropertiesService.getUserProperties().getProperty('auth_session_id');
+    
+    if (!sessionId) {
+      console.log('No session ID found');
+      return { success: false, message: 'No session ID found' };
+    }
+    
+    const url = `${BACKEND_BASE_URL}/api/user/get-temp-auth/${sessionId}`;
+    
+    const options = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+    
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseData = JSON.parse(response.getContentText());
+    
+    if (responseCode === 200 && responseData.success) {
+      // Store the authentication data
+      storeAuthData(responseData.token, responseData.email);
+      
+      // Clear the session ID since it's been used
+      PropertiesService.getUserProperties().deleteProperty('auth_session_id');
+      
+      console.log('✅ Authentication data retrieved and stored successfully');
+      return {
+        success: true,
+        token: responseData.token,
+        email: responseData.email
+      };
+    } else {
+      console.log('❌ No authentication data found or expired');
+      return { 
+        success: false, 
+        message: responseData.message || 'No authentication data found' 
+      };
+    }
+    
+  } catch (error) {
+    console.error('Error retrieving auth data:', error);
+    return { 
+      success: false, 
+      message: 'Failed to retrieve authentication data' 
+    };
+  }
+}
+
+/**
+ * Get the external authentication URL
+ */
+function getAuthUrl() {
+  return AUTH_WEBSITE_URL;
+}
+
+/**
+ * Wrapper function to check authentication before executing main functions
+ */
+function requireAuth(callback) {
+  const authStatus = isUserAuthenticated();
+  
+  if (!authStatus.authenticated) {
+    return {
+      success: false,
+      requireAuth: true,
+      message: 'Authentication required',
+      authUrl: AUTH_WEBSITE_URL
+    };
+  }
+  
+  return callback();
+}
+
+/**
+ * Quick test to verify UrlFetch whitelist/permissions for Gemini endpoint.
+ * Run from the Apps Script editor: testGeminiWhitelist()
+ */
+function testGeminiWhitelist() {
+  try {
+    const testUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+    const res = UrlFetchApp.fetch(testUrl, {
+      method: 'get',
+      muteHttpExceptions: true,
+      followRedirects: true
+    });
+    const code = res.getResponseCode();
+    const text = res.getContentText();
+    console.log('Whitelist test status:', code);
+    console.log('Whitelist test body (first 300):', text.substring(0, 300));
+    return {
+      ok: true,
+      status: code,
+      snippet: text.substring(0, 300)
+    };
+  } catch (e) {
+    console.error('Whitelist test error:', e);
+    return { ok: false, error: e && e.message ? e.message : String(e) };
+  }
+}
