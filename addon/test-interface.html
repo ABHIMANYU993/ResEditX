@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <title>ResumeGenie Gemini API Test</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h3 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .loading {
+            color: #667eea;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧠 ResumeGenie Gemini API Test Interface</h1>
+    <p>Test the Gemini AI integration functions directly from Google Apps Script.</p>
+
+    <!-- Keyword Extraction Test -->
+    <div class="test-section">
+        <h3>🔍 Keyword Extraction Test</h3>
+        <p>Test extracting keywords from a job description using Gemini AI:</p>
+        <textarea id="jobDescTest" placeholder="Paste a job description here to test keyword extraction...">Senior Software Engineer position requiring expertise in Python, machine learning, and cloud technologies. Must have experience with AWS, Docker, and agile development methodologies.</textarea>
+        <br>
+        <button onclick="testKeywordExtraction()">Extract Keywords with Gemini AI</button>
+        <div id="keywordResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Resume Analysis Test -->
+    <div class="test-section">
+        <h3>📊 Resume Analysis Test</h3>
+        <p>Test ATS analysis using Gemini AI:</p>
+        <textarea id="resumeTest" placeholder="Paste resume content here...">Experienced software engineer with 5+ years in Python development. Led team of 8 developers, implemented CI/CD pipelines, reduced deployment time by 40%. Expertise in Django, React, and PostgreSQL.</textarea>
+        <br>
+        <button onclick="testResumeAnalysis()">Analyze Resume with Gemini AI</button>
+        <div id="analysisResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Bullet Point Generation Test -->
+    <div class="test-section">
+        <h3>✍️ Bullet Point Generation Test</h3>
+        <p>Test generating bullet points using Gemini AI:</p>
+        <textarea id="bulletContextTest" placeholder="Original bullet point or context...">Managed software development team</textarea>
+        <br>
+        <label>Keywords: </label>
+        <input type="text" id="bulletKeywordsTest" value="leadership, team management, software development" style="width: 300px; margin: 10px;">
+        <br>
+        <button onclick="testBulletGeneration()">Generate Bullet Point with Gemini AI</button>
+        <div id="bulletResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- New Bullet from Keyword Test -->
+    <div class="test-section">
+        <h3>🆕 New Bullet from Keyword Test</h3>
+        <p>Test creating new bullet points from keywords using Gemini AI:</p>
+        <input type="text" id="newBulletKeyword" value="machine learning" style="width: 300px; margin: 10px;">
+        <br>
+        <button onclick="testNewBulletGeneration()">Generate New Bullet with Gemini AI</button>
+        <div id="newBulletResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Text Optimization Test -->
+    <div class="test-section">
+        <h3>✨ Text Optimization Test</h3>
+        <p>Test optimizing resume text using Gemini AI:</p>
+        <textarea id="optimizeTextTest" placeholder="Text to optimize...">Responsible for managing database systems and ensuring data integrity</textarea>
+        <br>
+        <label>Target Keywords: </label>
+        <input type="text" id="optimizeKeywordsTest" value="database management, data integrity, systems administration" style="width: 300px; margin: 10px;">
+        <br>
+        <button onclick="testTextOptimization()">Optimize Text with Gemini AI</button>
+        <div id="optimizeResult" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        function showResult(elementId, content, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${type}`;
+            element.textContent = content;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result loading';
+            element.textContent = 'Loading... Please wait while Gemini AI processes your request...';
+        }
+
+        function testKeywordExtraction() {
+            const jobDesc = document.getElementById('jobDescTest').value.trim();
+            if (!jobDesc) {
+                alert('Please enter a job description first');
+                return;
+            }
+
+            showLoading('keywordResult');
+            
+            google.script.run
+                .withSuccessHandler((result) => {
+                    if (result && result.success) {
+                        const content = `✅ Keywords extracted successfully!\n\nKeywords found: ${result.count}\n\n${result.keywords.join(', ')}`;
+                        showResult('keywordResult', content, 'success');
+                    } else {
+                        showResult('keywordResult', `❌ Error: ${result.error || 'Unknown error'}`, 'error');
+                    }
+                })
+                .withFailureHandler((error) => {
+                    showResult('keywordResult', `❌ Error: ${error.message || 'Unknown error'}`, 'error');
+                })
+                .extractKeywordsWithGemini(jobDesc);
+        }
+
+        function testResumeAnalysis() {
+            const resumeText = document.getElementById('resumeTest').value.trim();
+            const jobDesc = document.getElementById('jobDescTest').value.trim();
+            
+            if (!resumeText || !jobDesc) {
+                alert('Please enter both resume content and job description');
+                return;
+            }
+
+            showLoading('analysisResult');
+            
+            google.script.run
+                .withSuccessHandler((result) => {
+                    if (result && result.success) {
+                        let content = '✅ Resume analysis completed!\n\n';
+                        if (result.parsed) {
+                            content += `ATS Score: ${result.parsed.score}/100\n`;
+                            content += `Keyword Match: ${result.parsed.keywordMatch}%\n`;
+                            content += `Skills Match: ${result.parsed.skillsMatch}%\n`;
+                            content += `Experience Match: ${result.parsed.experienceMatch}%\n\n`;
+                            content += `Advice: ${result.parsed.advice}\n\n`;
+                            if (result.parsed.missingKeywords && result.parsed.missingKeywords.length > 0) {
+                                content += `Missing Keywords: ${result.parsed.missingKeywords.join(', ')}\n\n`;
+                            }
+                            if (result.parsed.strengths && result.parsed.strengths.length > 0) {
+                                content += `Strengths: ${result.parsed.strengths.join(', ')}`;
+                            }
+                        } else {
+                            content += 'Raw response (parsing failed):\n' + result.raw;
+                        }
+                        showResult('analysisResult', content, 'success');
+                    } else {
+                        showResult('analysisResult', `❌ Error: ${result.error || 'Unknown error'}`, 'error');
+                    }
+                })
+                .withFailureHandler((error) => {
+                    showResult('analysisResult', `❌ Error: ${error.message || 'Unknown error'}`, 'error');
+                })
+                .analyzeResumeWithGemini(resumeText, jobDesc);
+        }
+
+        function testBulletGeneration() {
+            const contextText = document.getElementById('bulletContextTest').value.trim();
+            const keywords = document.getElementById('bulletKeywordsTest').value.trim();
+            
+            if (!contextText || !keywords) {
+                alert('Please enter both context text and keywords');
+                return;
+            }
+
+            showLoading('bulletResult');
+            
+            const keywordArray = keywords.split(',').map(k => k.trim());
+            
+            google.script.run
+                .withSuccessHandler((result) => {
+                    if (result && result.success) {
+                        const content = `✅ Bullet point generated successfully!\n\nGenerated bullet:\n${result.result}`;
+                        showResult('bulletResult', content, 'success');
+                    } else {
+                        showResult('bulletResult', `❌ Error: ${result.error || 'Unknown error'}`, 'error');
+                    }
+                })
+                .withFailureHandler((error) => {
+                    showResult('bulletResult', `❌ Error: ${error.message || 'Unknown error'}`, 'error');
+                })
+                .generateBulletWithGemini(contextText, keywordArray, 'long', false);
+        }
+
+        function testNewBulletGeneration() {
+            const keyword = document.getElementById('newBulletKeyword').value.trim();
+            
+            if (!keyword) {
+                alert('Please enter a keyword');
+                return;
+            }
+
+            showLoading('newBulletResult');
+            
+            google.script.run
+                .withSuccessHandler((result) => {
+                    if (result && result.success) {
+                        const content = `✅ New bullet point generated successfully!\n\nGenerated bullet:\n${result.result}`;
+                        showResult('newBulletResult', content, 'success');
+                    } else {
+                        showResult('newBulletResult', `❌ Error: ${result.error || 'Unknown error'}`, 'error');
+                    }
+                })
+                .withFailureHandler((error) => {
+                    showResult('newBulletResult', `❌ Error: ${error.message || 'Unknown error'}`, 'error');
+                })
+                .generateNewBulletFromKeyword(keyword, 'long', false);
+        }
+
+        function testTextOptimization() {
+            const text = document.getElementById('optimizeTextTest').value.trim();
+            const keywords = document.getElementById('optimizeKeywordsTest').value.trim();
+            
+            if (!text || !keywords) {
+                alert('Please enter both text to optimize and target keywords');
+                return;
+            }
+
+            showLoading('optimizeResult');
+            
+            google.script.run
+                .withSuccessHandler((result) => {
+                    if (result && result.success) {
+                        const content = `✅ Text optimized successfully!\n\nOptimized text:\n${result.result}`;
+                        showResult('optimizeResult', content, 'success');
+                    } else {
+                        showResult('optimizeResult', `❌ Error: ${result.error || 'Unknown error'}`, 'error');
+                    }
+                })
+                .withFailureHandler((error) => {
+                    showResult('optimizeResult', `❌ Error: ${error.message || 'Unknown error'}`, 'error');
+                })
+                .optimizeResumeSectionWithGemini(text, keywords);
+        }
+    </script>
+</body>
+</html>
