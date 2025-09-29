@@ -936,3 +936,195 @@ Respond with ONLY a JSON object in this exact format:
 }/**
  * Generate bullet point using Gemini AI
  */
+function generateBulletWithGemini(contextText, selectedKeywords, length, addHeader) {
+  return requireAuth(() => {
+    try {
+      const prompt = `Transform this resume bullet point into a high-impact, achievement-focused statement. Requirements:
+
+TARGET KEYWORDS: ${(selectedKeywords || []).join(', ')}
+LENGTH: ${length === 'long' ? '25-35 words' : '15-20 words'}
+${addHeader ? 'START WITH: A bolded header using the primary keyword' : ''}
+
+Guidelines:
+- Use strong action verbs
+- Include quantifiable results where possible
+- Incorporate target keywords naturally
+- Focus on impact and achievements
+- Use professional, ATS-friendly language
+
+Original bullet point:
+${contextText}
+
+Return only the improved bullet point:`;
+
+    const response = callGeminiAPI(prompt, { 
+      temperature: 0.3, 
+      maxTokens: 400 
+    });
+    
+    if (response.success) {
+      return {
+        success: true,
+        result: response.result
+      };
+  } else {
+    throw new Error(response.error || 'Failed to generate bullet point');
+  }
+  
+} catch (error) {
+  console.error('Error generating bullet point with Gemini:', error);
+  return {
+    success: false,
+    error: error.message
+  };
+}
+});
+}/**
+ * Generate new bullet point from keyword using Gemini AI
+ */
+function generateNewBulletFromKeyword(keyword, length, addHeader) {
+  return requireAuth(() => {
+    try {
+      const prompt = `Create a compelling resume bullet point focused on the keyword "${keyword}". Requirements:
+
+LENGTH: ${length === 'long' ? '25-35 words' : '15-20 words'}
+${addHeader ? 'START WITH: A bolded header using the keyword' : ''}
+
+Guidelines:
+- Use strong action verbs (led, developed, implemented, optimized, etc.)
+- Include quantifiable metrics where relevant (%, $, time saved, etc.)
+- Focus on achievements and impact
+- Make it ATS-friendly and professional
+- Ensure it sounds realistic and accomplishable
+
+Return only the bullet point:`;
+
+    const response = callGeminiAPI(prompt, { 
+      temperature: 0.4, 
+      maxTokens: 400 
+    });
+    
+    if (response.success) {
+      return {
+        success: true,
+    result: response.result
+  };
+} else {
+  throw new Error(response.error || 'Failed to generate new bullet point');
+}
+
+} catch (error) {
+console.error('Error generating new bullet point with Gemini:', error);
+return {
+  success: false,
+  error: error.message
+};
+}
+});
+}/**
+ * Optimize resume section using Gemini AI
+ */
+function optimizeResumeSectionWithGemini(sectionText, keywords) {
+  return requireAuth(() => {
+    try {
+      const prompt = `Optimize this resume section for better ATS compatibility and impact. Focus on:
+
+SECTION CONTENT:
+${sectionText}
+
+TARGET JOB KEYWORDS: ${keywords || 'N/A'}
+
+Guidelines:
+- Improve keyword density naturally
+- Enhance action verbs and impact statements
+- Ensure ATS-friendly formatting
+- Maintain authenticity and readability
+- Focus on achievements over responsibilities
+
+Return the optimized section:`;
+
+    const response = callGeminiAPI(prompt, { 
+      temperature: 0.3, 
+      maxTokens: 800 
+    });
+    
+    if (response.success) {
+      return {
+        success: true,
+        result: response.result
+      };
+    } else {
+      throw new Error(response.error || 'Failed to optimize resume section');
+    }
+    
+ } catch (error) {
+   console.error('Error optimizing resume section with Gemini:', error);
+   return {
+     success: false,
+     error: error.message
+   };
+ }
+ });
+}/**
+ * Suggest improvements using Gemini AI
+ */
+function suggestImprovementsWithGemini(content) {
+  return requireAuth(() => {
+    try {
+      const prompt = `Review this resume content and suggest specific improvements:
+
+CONTENT:
+${content}
+
+Provide 5-7 specific, actionable suggestions to:
+- Strengthen impact statements
+- Improve keyword optimization
+- Enhance readability
+- Better showcase achievements
+- Improve ATS compatibility
+
+Format as a numbered list:`;
+
+    const response = callGeminiAPI(prompt, { 
+      temperature: 0.2, 
+      maxTokens: 500 
+    });
+    
+    if (response.success) {
+      return {
+        success: true,
+        result: response.result
+      };
+    } else {
+      throw new Error(response.error || 'Failed to suggest improvements');
+  }
+  
+} catch (error) {
+  console.error('Error suggesting improvements with Gemini:', error);
+  return {
+    success: false,
+    error: error.message
+  };
+}
+});
+}/**
+ * Health check function to verify ResEditX is running continuously
+ */
+function checkServiceHealth() {
+  try {
+    /* Lines 1115-1152 omitted */
+    
+  } catch (error) {/* Lines 1154-1161 omitted */}
+}
+
+/**
+ * Quick test to verify UrlFetch whitelist/permissions for Gemini endpoint.
+ * Run from the Apps Script editor: testGeminiWhitelist()
+ */
+function testGeminiWhitelist() {
+  try {
+  } catch (e) {/* Lines 1186-1188 omitted */}
+}
+
+/**
+ * Web app endpoint to receive authentication data from external auth page
